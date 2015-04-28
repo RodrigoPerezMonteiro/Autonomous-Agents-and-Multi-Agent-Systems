@@ -408,7 +408,7 @@ public class Board {
                 if (vc.getTeam() == VaccumCleaner.Team.BLUE_TEAM) blueTeamMembers--;
                 else if (vc.getTeam() == VaccumCleaner.Team.RED_TEAM) redTeamMembers--;
                 int members = getTeamMembersLeft(vc.getTeam());
-                System.out.println("DEATH: " + vc.getTeam().toString() + ", Agent ID = " + vc.getId() + " position = " + vc.getX() + "," + vc.getY() + " team members left = " + members + " removed: " + removed);
+                System.out.println("DEATH: " + vc.getTeam().toString() + ", Agent ID = " + vc.getId() + " position = " + vc.getX() + "," + vc.getY() + " team members left = " + members);
                 vc.setDead(true);
                 if (members == 0) setOver(true);
                 if (isOver()){
@@ -484,7 +484,6 @@ public class Board {
         }
 
         // Insert garbage
-        System.out.println("Inserting garbage!");
         garbageToSweep = numGarbage;
         while(numGarbage > 0) {
             boolean gotGoodPosition = false;
@@ -502,7 +501,6 @@ public class Board {
         }
 
         // Insert powerups
-        System.out.println("Inserting powerups!");
         for(int i = 0; i < numPowerups; i++) {
 
             boolean gotGoodPosition = false;
@@ -538,7 +536,6 @@ public class Board {
         }
 
         //Inserting snitch
-        System.out.println("Inserting snitch");
         boolean gotGoodPosition = false;
         int x = 0, y = 0;
         Random rnd = new Random();
