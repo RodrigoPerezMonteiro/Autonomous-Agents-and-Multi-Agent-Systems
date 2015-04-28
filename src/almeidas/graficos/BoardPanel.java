@@ -11,7 +11,7 @@ import java.awt.event.ActionListener;
 
 public class BoardPanel extends JPanel{
 
-    public static int N_SQUARES = 10;
+    public static int N_SQUARES = 15;
 
     public static final int SQUARE_SIZE = 50;
     public static final int WINDOW_X = N_SQUARES * SQUARE_SIZE;

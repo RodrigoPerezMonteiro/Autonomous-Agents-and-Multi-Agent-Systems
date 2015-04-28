@@ -1,6 +1,7 @@
 package almeidas.domain;
 
 import almeidas.domain.agents.Collector;
+import almeidas.domain.agents.Snitch;
 import almeidas.domain.agents.Sweeper;
 import almeidas.domain.agents.VaccumCleaner;
 import almeidas.graficos.BoardPanel;
@@ -8,6 +9,7 @@ import almeidas.graficos.BoardPanel;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,14 +19,20 @@ public class Board {
     Tile[][] board;
 
     private int width, height;
+    private int totalGarbage;
     private int scoreBlueTeam, scoreRedTeam;
     private int garbageToSweep = 0;
+    private int garbageToCollect = 0;
     private int garbageDelivered = 0;
     private int collectorsAlive = 0;
+    private int blueCollectorsAlive = 0;
+    private int redCollectorsAlive = 0;
     private int redTeamMembers;
     private int blueTeamMembers;
     private int gameSpeed = 3;
     private boolean started;
+    private boolean snitchAlive = true;
+    private static final int SNITCH_ID = -1;
     private Graphics2D g2d;
 
     private static BufferedImage sweeper_red;
@@ -35,6 +43,7 @@ public class Board {
     private static BufferedImage speedup;
     private static BufferedImage energyup;
     private static BufferedImage resistanceup;
+    private static BufferedImage snitch;
 
     //private static final int gameSpeed = 1;
 
@@ -59,6 +68,7 @@ public class Board {
             energyup = ImageIO.read(classLoader.getResource("resources/images/energyup.png"));
             resistanceup = ImageIO.read(classLoader.getResource("resources/images/resistanceup.png"));
             strengthup = ImageIO.read(classLoader.getResource("resources/images/strengthup.png"));
+            snitch = ImageIO.read(classLoader.getResource("resources/images/snitch.png"));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -83,6 +93,7 @@ public class Board {
     }
 
     public void startAll(){
+        ArrayList<VaccumCleaner> _vcArray = new ArrayList<VaccumCleaner>();
         setStarted(true);
         String agentType;
         ExecutorService executor = Executors.newCachedThreadPool();
@@ -92,12 +103,16 @@ public class Board {
                     //VaccumCleaner v : board[i][j].agents
                     VaccumCleaner v = board[i][j].agents.get(k);
                     if(v.getId() >= 300) agentType = "Collector";
+                    else if(v.getId() == SNITCH_ID) agentType = "Snitch";
                     else agentType = "Sweeper";
-                    System.out.println("Board: startAll() - launched thread for agent ID: " + v.getId() + " of type: " + agentType);
+                    System.out.println("THREAD START: Agent ID = " + v.getId() + " of type: " + agentType);
 
-                    executor.execute(v);
+                    _vcArray.add(v);
                 }
             }
+        }
+        for(int j = 0; j<_vcArray.size(); j++){
+            executor.execute(_vcArray.get(j));
         }
     }
 
@@ -106,7 +121,7 @@ public class Board {
             for (int j = 0; j < height; j++) {
                 for (VaccumCleaner v : board[i][j].agents) {
 
-                    System.out.println("Pause-All");
+                    System.out.println("THREAD PAUSE: Agent ID = " + v.getId());
                     v.stop();
                 }
             }
@@ -118,7 +133,7 @@ public class Board {
             for (int j = 0; j < height; j++) {
                 for (Entity e : board[i][j].agents) {
                     VaccumCleaner v  = (VaccumCleaner)e;
-                    System.out.println("Killed Thread for agent ID = " + v.getId() + " from " + v.getTeam().toString());
+                    System.out.println("THREAD STOP: Agent ID = " + v.getId() + " from " + (v.getTeam() != null ? v.getTeam().toString() : "Snitch"));
                     v.stop();
                 }
             }
@@ -166,9 +181,11 @@ public class Board {
         boolean o = false;
 
         if(started){
-            if(over){ System.out.println("Seems to be over..."); o = true; } //One of the teams has no members left
-            else if(garbageDelivered >= garbageToSweep){ System.out.println("There doesnt seem to be any garbage left..."); o = true; }
-            else if (collectorsAlive == 0){ System.out.println("No collectors are alive anymore..."); o = true; }
+            if(over){ System.out.println("GAME OVER -> Motif: Team anihilated"); o = true; } //One of the teams has no members left
+            else if(!snitchAlive && (garbageDelivered >= (totalGarbage * (5/4)))){ System.out.println("GAME OVER -> Motif: No garbage left (Snitch captured)"); o = true; }
+            else if ((blueCollectorsAlive == 0) && (scoreBlueTeam < scoreRedTeam)){ System.out.println("GAME OVER -> Motif: Red Team is up, no Blue collectors left"); o = true; }
+            else if ((redCollectorsAlive == 0) && (scoreRedTeam < scoreBlueTeam)){ System.out.println("GAME OVER -> Motif: Blue Team is up, no Red collectors left"); o = true; }
+            else if (collectorsAlive == 0){ System.out.println("GAME OVER -> Motif: No collectors are alive anymore"); o = true; }
         }
 
         return o;
@@ -195,6 +212,59 @@ public class Board {
     }
 
     // Board perceptions
+    public synchronized int[] perceptSnitch(int x, int y){
+        VaccumCleaner snitch = null;
+
+        for(int i = -1; i < 1; i++) {
+            for (int j = -1; j < 1; j++) {
+                if(canDo(x, y, i, j)) {
+                    if (board[x+i][y+j].agents.size() > 0) {
+                        for (int k = 0; k < board[x+i][y+j].agents.size(); k++) {
+                            VaccumCleaner v = board[x+i][y+j].agents.get(k);
+                            if (v.getId() == SNITCH_ID) {
+                                snitch = v;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if(snitch != null){
+            int pos[] = {snitch.getX(), snitch.getY()};
+            return pos;
+        }
+        return null;
+    }
+
+    public synchronized void grabSnitch(VaccumCleaner vc, int[] snitchPos){
+        VaccumCleaner snitch = null;
+        ArrayList<VaccumCleaner> vcArray = board[snitchPos[0]][snitchPos[1]].getAgents();
+
+        if(vcArray.size() > 0){
+            for(int i=0; i< vcArray.size(); i++){
+                if(vcArray.get(i).getId() == SNITCH_ID){
+                    snitch = vcArray.get(i);
+                }
+            }
+        }
+
+        snitch.setDead(true);
+        snitchAlive = false;
+
+        boolean remove = vcArray.remove(snitch);
+        System.out.println("THREAD STOP: Agent ID = " + snitch.getId() + " (" + (snitch.getTeam() != null ? (snitch.getTeam().toString() + ")") : "Snitch)"));
+        snitch.stop();
+
+        if(vc.getTeam() == VaccumCleaner.Team.BLUE_TEAM){
+            addScoreBlueTeam((int)Math.round(totalGarbage/4));
+        }
+        else if(vc.getTeam() == VaccumCleaner.Team.RED_TEAM){
+            addScoreRedTeam((int) Math.round(totalGarbage / 4));
+        }
+    }
+
     public synchronized boolean perceptGarbage(int x, int y){
         return board[x][y].getGarbage() > 0;
     }
@@ -210,15 +280,17 @@ public class Board {
             return checkRedBase(x, y);
         }
     }
+    
+    
 
-    private boolean checkBlueBase(int x, int y) {
+    public boolean checkBlueBase(int x, int y) {
         return ((x == 0 && y == 0) ||
                 (x == 0 && y == 1) ||
                 (x == 1 && y == 0) ||
                 (x == 1 && y == 1) );
     }
 
-    private boolean checkRedBase(int x, int y) {
+    public boolean checkRedBase(int x, int y) {
         return ((x == (width-1) && y == (height-1)) ||
                 (x == (width-1) && y == (height-2)) ||
                 (x == (width-2) && y == (height-1)) ||
@@ -233,8 +305,10 @@ public class Board {
             for (int j = -1; j < 1; j++) {
                 if(canDo(x, y, i, j)) {
                     if (board[x+i][y+j].agents.size() > 0) {
-                        for (VaccumCleaner v : board[x+i][y+j].agents) {
-                            if (v.getTeam() != team) {
+                        for (int k = 0; k < board[x+i][y+j].agents.size(); k++) {
+                                //VaccumCleaner v : board[x+i][y+j].agents) {
+                            VaccumCleaner v = board[x+i][y+j].agents.get(k);
+                            if (v.getTeam() != team && v.getTeam() != null) {
                                 enemy = v;
                                 break; //Returns first enemy found (if there is more than one, the one on the northwest corner is returned first
                             }
@@ -251,7 +325,7 @@ public class Board {
         return null;
     }
 
-    protected boolean canDo(int x, int y, int incX, int incY){
+    public boolean canDo(int x, int y, int incX, int incY){
         int minX = 0;
         int minY = 0;
         int maxX = getWidth();
@@ -270,6 +344,8 @@ public class Board {
     // Board actions
     public synchronized void sweep(int x, int y){
         if(board[x][y].getGarbage() > 0){
+            garbageToCollect ++;
+            garbageToSweep --;
             board[x][y].setGarbage(board[x][y].getGarbage()-1);
             board[x][y].setSweptGarbage(board[x][y].getSweptGarbage()+1);
         }
@@ -298,7 +374,7 @@ public class Board {
     public synchronized void attackTile(VaccumCleaner.Team team, float damage, int x, int y, VaccumCleaner vc){
         if(board[x][y].agents.size() > 0){
             for(VaccumCleaner v : board[x][y].agents){
-                if(v.getTeam() != team){
+                if(v.getTeam() != team && v.getTeam() != null){
                     v.takeDamage(damage);
                     break;
                 }
@@ -314,19 +390,25 @@ public class Board {
 
     public synchronized void destroyAgent(VaccumCleaner vc) {
 
-        if (vc instanceof Collector) collectorsAlive--;
+        if (vc instanceof Collector) {
+            collectorsAlive--;
+            if (vc.getTeam() == VaccumCleaner.Team.BLUE_TEAM) blueCollectorsAlive--;
+            else if (vc.getTeam() == VaccumCleaner.Team.RED_TEAM) redCollectorsAlive--;
+        }
 
         int x = vc.getX();
         int y = vc.getY();
 
         if(board[x][y].agents.size() > 0) {
             boolean removed = board[x][y].agents.remove(vc);
+            System.out.println("THREAD STOP: Agent ID = " + vc.getId() + " from " + (vc.getTeam() != null ? vc.getTeam().toString() : "Snitch"));
+            vc.stop();
 
             if (!vc.getDead()) {
                 if (vc.getTeam() == VaccumCleaner.Team.BLUE_TEAM) blueTeamMembers--;
                 else if (vc.getTeam() == VaccumCleaner.Team.RED_TEAM) redTeamMembers--;
                 int members = getTeamMembersLeft(vc.getTeam());
-                System.out.println("DEATH: " + vc.getTeam().toString() + ", ID = " + vc.getId() + " position = " + vc.getX() + "," + vc.getY() + " team members left = " + members + " removed: " + removed);
+                System.out.println("DEATH: " + vc.getTeam().toString() + ", Agent ID = " + vc.getId() + " position = " + vc.getX() + "," + vc.getY() + " team members left = " + members + " removed: " + removed);
                 vc.setDead(true);
                 if (members == 0) setOver(true);
                 if (isOver()){
@@ -358,10 +440,11 @@ public class Board {
     }
 
     public void start(int numberRobots, int numCollectors, int numPowerups, int numGarbage) {
+        totalGarbage = numGarbage;
         collectorsAlive = numCollectors * 2;
+        blueCollectorsAlive = redCollectorsAlive = numCollectors;
         redTeamMembers = blueTeamMembers = numberRobots;
         over = false;
-        System.out.println("Number of robots: " + numberRobots + ", Number of sweepers: " + (numberRobots - numCollectors));
         //BLUE TEAM
         int robotsInserted = 0;
         int id_S_blue = 100;
@@ -454,6 +537,17 @@ public class Board {
 
         }
 
+        //Inserting snitch
+        System.out.println("Inserting snitch");
+        boolean gotGoodPosition = false;
+        int x = 0, y = 0;
+        Random rnd = new Random();
+        while(!gotGoodPosition) {
+            x = rnd.nextInt(width);
+            y = rnd.nextInt(height);
+            gotGoodPosition = board[x][y].agents.size() == 0 && board[x][y].getPowerUp() == null;
+        }
+        addAgent(new Snitch(x, y, this, snitch), x, y);
     }
 
     public void render(Graphics2D g) {

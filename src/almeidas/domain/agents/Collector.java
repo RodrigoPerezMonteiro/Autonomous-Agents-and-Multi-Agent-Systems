@@ -19,6 +19,7 @@ public class Collector extends VaccumCleaner{
     private static final int ENEMY = 3;
     private static final int BASE = 4;
     private static final int HAS_GARBAGE = 5;
+    private static final int SNITCH = 6;
 
     BufferedImage sprite;
     public int garbage;
@@ -37,10 +38,12 @@ public class Collector extends VaccumCleaner{
         g.drawString("" + getSpeed(), BoardPanel.SQUARE_SIZE * this.getX() + 25, BoardPanel.SQUARE_SIZE * this.getY() + 10);
         g.setColor(Color.GREEN);
         g.drawString("" + getEnergy(), BoardPanel.SQUARE_SIZE * this.getX() + 25, BoardPanel.SQUARE_SIZE * this.getY() + 20);
-        g.setColor(Color.YELLOW);
+        g.setColor(Color.ORANGE);
         g.drawString("" + getResistance(), BoardPanel.SQUARE_SIZE * this.getX() + 25, BoardPanel.SQUARE_SIZE * this.getY() + 30);
         g.setColor(Color.RED);
         g.drawString("" + getStrength(), BoardPanel.SQUARE_SIZE * this.getX() + 25, BoardPanel.SQUARE_SIZE * this.getY() + 40);
+        g.setColor(Color.GRAY);
+        g.drawString("ID:" + getId(), BoardPanel.SQUARE_SIZE * this.getX() + 20, BoardPanel.SQUARE_SIZE * this.getY() + 50);
         g.setFont(new Font("default", Font.BOLD, 15));
         g.setColor(Color.CYAN);
         g.drawString("" + garbage, BoardPanel.SQUARE_SIZE * this.getX() + 5, BoardPanel.SQUARE_SIZE * this.getY() + 50);
@@ -54,7 +57,10 @@ public class Collector extends VaccumCleaner{
 
         if(!getDead()) {
             if (getEnergy() > 0) {
-                if (perceptions[SWIPED_GARBAGE]) { //meaning the tile has garbage and is swiped
+                if(perceptions[SNITCH]){
+                    grabSnitch();
+                    setEnergy(getEnergy()-1);
+                }else if (perceptions[SWIPED_GARBAGE]) { //meaning the tile has garbage and is swiped
                     grabGarbage();
                     setEnergy(getEnergy() - 1);
                 } else if (perceptions[BASE] && perceptions[HAS_GARBAGE]) { //meaning the collector is in the mother base and has garbage
@@ -76,13 +82,14 @@ public class Collector extends VaccumCleaner{
     }
 
     public Boolean[] percept() {
-        Boolean[] perceptions = new Boolean[6];
+        Boolean[] perceptions = new Boolean[7];
         perceptions[GARBAGE] = checkGarbage(); //0 if there's no garbage
         perceptions[SWIPED_GARBAGE] = checkSwipedGarbage(); //if there's garbage, 0 if it's raw. 1 if it's swiped
         perceptions[POWERUP] = checkPowerUp(); //1 if there's a power up
         perceptions[ENEMY] = (checkEnemy() != null); //1 if there's an enemy
         perceptions[BASE] = checkBase(); //1 if the agent is in the mother base
         perceptions[HAS_GARBAGE] = hasGarbage(); //1 if the collector is carrying garbage
+        perceptions[SNITCH] = (hasSnitch() != null); //1 if the collector is carrying garbage
         return perceptions;
     }
 

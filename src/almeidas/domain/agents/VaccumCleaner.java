@@ -89,21 +89,31 @@ public abstract class VaccumCleaner extends Entity implements Runnable{
     /*#########################
           Perceptions
       #########################*/
-    public boolean checkGarbage(){
+    protected boolean checkGarbage(){
         return getBoard().perceptGarbage(getX(), getY());
     }
 
-    public boolean checkPowerUp(){
+    protected boolean checkPowerUp(){
         return getBoard().perceptPowerUp(getX(), getY());
     }
 
-    public int[] checkEnemy(){
+    protected int[] checkEnemy(){
         return getBoard().perceptEnemy(getX(), getY(), getTeam());
+    }
+
+    protected int[] hasSnitch(){
+        return getBoard().perceptSnitch(getX(), getY());
     }
 
     /*#########################
             Actions
       #########################*/
+
+    public void grabSnitch(){
+        System.out.println("GRAB SNITCH: " + getTeam().toString() + ", ID = " +  getId());
+        getBoard().grabSnitch(this, hasSnitch());
+    }
+
 
     public void takeDamage(float damage) {
         System.out.println("GOT HIT: " + getTeam().toString() + ", ID = " +  getId() + " position = " + getX() + "," + getY() + " damage = " + damage + " life left = " + (resistance-damage));
@@ -184,7 +194,7 @@ public abstract class VaccumCleaner extends Entity implements Runnable{
         return move;
     }
 
-    private boolean canDo(int incX, int incY){
+    protected boolean canDo(int incX, int incY){
 
         int minX = 0;
         int minY = 0;

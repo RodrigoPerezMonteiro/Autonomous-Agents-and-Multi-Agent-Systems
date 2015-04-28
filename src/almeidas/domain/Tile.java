@@ -28,6 +28,10 @@ public class Tile {
         board = b;
     }
 
+    public ArrayList<VaccumCleaner> getAgents(){
+        return agents;
+    }
+
     public void setValue(int increment){
         value += increment;
     }
@@ -67,7 +71,7 @@ public class Tile {
 
         if(x == 0 && y == 0){
             g.setColor(Color.BLUE);
-            g.drawString("" + this.getValue(), BoardPanel.SQUARE_SIZE * x + 40, BoardPanel.SQUARE_SIZE * y + 50);
+            g.drawString("" + this.getValue(), BoardPanel.SQUARE_SIZE * x + 35, BoardPanel.SQUARE_SIZE * y + 48);
             g.setStroke(new BasicStroke(4));
             g.drawLine(0, 0, 0, BoardPanel.SQUARE_SIZE * 2);
             g.drawLine(0, 0, BoardPanel.SQUARE_SIZE*2, 0);
@@ -76,7 +80,7 @@ public class Tile {
         }
         else if((x == (board.getWidth() - 1)) && (y == (board.getHeight() -1))) {
             g.setColor(Color.RED);
-            g.drawString("" + this.getValue(), BoardPanel.SQUARE_SIZE * x + 40, BoardPanel.SQUARE_SIZE * y + 50);
+            g.drawString("" + this.getValue(), BoardPanel.SQUARE_SIZE * x + 35, BoardPanel.SQUARE_SIZE * y + 48);
             g.setStroke(new BasicStroke(4));
             int xw = BoardPanel.SQUARE_SIZE * (x+1);
             int yh = BoardPanel.SQUARE_SIZE * (y+1);
