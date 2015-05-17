@@ -8,18 +8,26 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.concurrent.TimeUnit;
 
-public class BoardPanel extends JPanel{
-
-    public static int N_SQUARES = 15;
+public class BoardPanel extends JPanel {
 
     public static final int SQUARE_SIZE = 50;
+    public static final int DELAY = 25;
+    public static int N_SQUARES = 15;
     public static final int WINDOW_X = N_SQUARES * SQUARE_SIZE;
     public static final int WINDOW_Y = N_SQUARES * SQUARE_SIZE;
-    public static final int DELAY = 25;
-
-    private Board board;
-
+    public static Timer timer;
+    public static JLabel gameOver;
+    public static JLabel redWins;
+    public static JLabel blueWins;
+    protected int nRobots;
+    protected int nCollectors;
+    protected int nPowerups;
+    protected int nGarbage;
+    protected String currentArchitecture = "BDI";
+    protected boolean communication = true;
+    ActionListener timerListener;
     JButton startButton, stopButton, initButton;
     JLabel labelNumberRobots;
     JTextField numberRobots;
@@ -33,27 +41,42 @@ public class BoardPanel extends JPanel{
     JTextField numberGarbage;
     JLabel labelSpeed;
     JSlider speed;
-    public static JLabel gameOver;
-    public static JLabel redWins;
-    public static JLabel blueWins;
+    JLabel comboLabel;
+    JComboBox comboboxxx;
+    JLabel communicationLabel;
+    JComboBox communicationBox;
+    JLabel timeLabel;
+    long start, end, elapsed, last, temp;
+    private Board board;
 
     public BoardPanel() {
-        board = new Board(N_SQUARES, N_SQUARES);
+        board = new Board(N_SQUARES, N_SQUARES, currentArchitecture, communication);
         initBoard();
 
         // Button for initializing
         ActionListener initButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent ae) {
                 board.clear();
-                int nRobots = Integer.parseInt(numberRobots.getText());
-                int nCollectors = Integer.parseInt(numberCollectors.getText());
-                int nPowerups = Integer.parseInt(numberPowerups.getText());
-                int nGarbage = Integer.parseInt(numberGarbage.getText());
+                nRobots = Integer.parseInt(numberRobots.getText());
+                nCollectors = Integer.parseInt(numberCollectors.getText());
+                nPowerups = Integer.parseInt(numberPowerups.getText());
+                nGarbage = Integer.parseInt(numberGarbage.getText());
                 gameOver.setVisible(false);
                 redWins.setVisible(false);
                 blueWins.setVisible(false);
-
+                timer = new Timer(10, timerListener);
+                timer.setInitialDelay(0);
+                temp = 0;
+                timeLabel.setText(String.format("%02d:%02d.%03d",
+                                TimeUnit.MILLISECONDS.toMinutes(temp),
+                                TimeUnit.MILLISECONDS.toSeconds(temp) -
+                                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(temp)),
+                                (temp - TimeUnit.SECONDS.toMillis(TimeUnit.MILLISECONDS.toSeconds(temp))))
+                );
+                speed.setValue(1);
                 numberSweepers.setText("" + (nRobots - nCollectors));
+                board = new Board(N_SQUARES, N_SQUARES, currentArchitecture, communication);
+                initBoard();
                 board.start(nRobots, nCollectors, nPowerups, nGarbage);
             }
         };
@@ -64,6 +87,10 @@ public class BoardPanel extends JPanel{
             public void actionPerformed(ActionEvent ae) {
                 board.startAll();
                 board.setStarted(true);
+                start = System.currentTimeMillis();
+                last = start;
+                temp = 0;
+                timer.start();
             }
         };
 
@@ -72,6 +99,7 @@ public class BoardPanel extends JPanel{
             @Override
             public void actionPerformed(ActionEvent ae) {
                 board.pauseAll();
+                timer.stop();
             }
         };
 
@@ -142,7 +170,7 @@ public class BoardPanel extends JPanel{
         this.add(numberPowerups);
 
         // Labels and textfield to enter number garbage
-        numberGarbage = new JTextField("50");
+        numberGarbage = new JTextField("100");
         numberGarbage.setLocation(WINDOW_X + 110, 280);
         numberGarbage.setSize(40, 40);
         numberGarbage.setHorizontalAlignment(JTextField.RIGHT);
@@ -165,8 +193,8 @@ public class BoardPanel extends JPanel{
         speed.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                JSlider j = (JSlider)e.getSource();
-                if(!j.getValueIsAdjusting()) {
+                JSlider j = (JSlider) e.getSource();
+                if (!j.getValueIsAdjusting()) {
                     board.setGameSpeed(j.getValue());
                     System.out.println("Changed speed to: " + board.getGameSpeed());
                 }
@@ -175,9 +203,106 @@ public class BoardPanel extends JPanel{
         this.add(labelSpeed);
         this.add(speed);
 
+        //COMBOBOXXXXXXX
+        comboLabel = new JLabel("Architecture");
+        comboLabel.setLocation(WINDOW_X + 5, 370);
+        comboLabel.setSize(140, 40);
+        comboLabel.setHorizontalAlignment(JTextField.CENTER);
+
+        String[] comboOpts = {"BDI", "Hybrid", "Reactive"};
+        comboboxxx = new JComboBox(comboOpts);
+        comboboxxx.setSelectedIndex(0);
+        comboboxxx.setLocation(WINDOW_X + 5, 400);
+        comboboxxx.setSize(150, 30);
+        comboboxxx.setVisible(true);
+
+        comboboxxx.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                JComboBox cb = (JComboBox) ae.getSource();
+                String arch = (String) cb.getSelectedItem();
+
+                currentArchitecture = arch;
+                board = new Board(N_SQUARES, N_SQUARES, arch, communication);
+                initBoard();
+                board.start(nRobots, nCollectors, nPowerups, nGarbage);
+                System.out.println("Arquitecture set to " + arch);
+            }
+        });
+
+        this.add(comboboxxx);
+        this.add(comboLabel);
+
+        //COMBOBOXXXXXXX
+        communicationLabel = new JLabel("Communications");
+        communicationLabel.setLocation(WINDOW_X + 5, 430);
+        communicationLabel.setSize(140, 40);
+        communicationLabel.setHorizontalAlignment(JTextField.CENTER);
+
+        String[] communicationOpts = {"ENABLED", "DISABLED"};
+        communicationBox = new JComboBox(communicationOpts);
+        communicationBox.setSelectedIndex(0);
+        communicationBox.setLocation(WINDOW_X + 5, 460);
+        communicationBox.setSize(150, 30);
+        communicationBox.setVisible(true);
+
+        communicationBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                JComboBox cb = (JComboBox) ae.getSource();
+                String option = (String) cb.getSelectedItem();
+
+                boolean communicationsON = communication;
+
+                if (option.equals("ENABLED")) {
+                    communicationsON = true;
+                } else if (option.equals("DISABLED")) {
+                    communicationsON = false;
+                }
+
+                communication = communicationsON;
+
+                board = new Board(N_SQUARES, N_SQUARES, currentArchitecture, communication);
+                initBoard();
+                board.start(nRobots, nCollectors, nPowerups, nGarbage);
+                System.out.println("Communications " + option);
+            }
+        });
+
+        this.add(communicationBox);
+        this.add(communicationLabel);
+
+
+        //TIMER
+        timeLabel = new JLabel("00:00.000");
+        timeLabel.setLocation(WINDOW_X + 5, 500);
+        timeLabel.setSize(140, 40);
+        timeLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        timeLabel.setHorizontalAlignment(JTextField.CENTER);
+        timerListener = new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                end = System.currentTimeMillis();
+                elapsed = (end - last);
+                temp += elapsed * board.getGameSpeed();
+
+                timeLabel.setText(String.format("%02d:%02d.%03d",
+                                TimeUnit.MILLISECONDS.toMinutes(temp),
+                                TimeUnit.MILLISECONDS.toSeconds(temp) -
+                                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(temp)),
+                                (temp - TimeUnit.SECONDS.toMillis(TimeUnit.MILLISECONDS.toSeconds(temp))))
+                );
+                last = end;
+            }
+        };
+
+        this.add(timeLabel);
+        timer = new Timer(10, timerListener);
+        timer.setInitialDelay(0);
+
+
         //Game Over Button
         gameOver = new JLabel("Game Over");
-        gameOver.setLocation(WINDOW_X + 10, 400);
+        gameOver.setLocation(WINDOW_X + 10, 570);
         gameOver.setSize(140, 40);
         gameOver.setHorizontalAlignment(JTextField.CENTER);
         gameOver.setFont(new Font("SansSerif", Font.BOLD, 19));
@@ -187,7 +312,7 @@ public class BoardPanel extends JPanel{
         this.add(gameOver);
 
         redWins = new JLabel("Red Wins");
-        redWins.setLocation(WINDOW_X + 10, 440);
+        redWins.setLocation(WINDOW_X + 10, 610);
         redWins.setSize(140, 40);
         redWins.setHorizontalAlignment(JTextField.CENTER);
         redWins.setFont(new Font("SansSerif", Font.BOLD, 19));
@@ -195,7 +320,7 @@ public class BoardPanel extends JPanel{
         redWins.setVisible(false);
 
         blueWins = new JLabel("Blue Wins");
-        blueWins.setLocation(WINDOW_X + 10, 440);
+        blueWins.setLocation(WINDOW_X + 10, 610);
         blueWins.setSize(140, 40);
         blueWins.setHorizontalAlignment(JTextField.CENTER);
         blueWins.setFont(new Font("SansSerif", Font.BOLD, 19));
@@ -211,33 +336,12 @@ public class BoardPanel extends JPanel{
         IRT.start();
     }
 
-    public Board getBoard(){
-        return board;
-    }
-
     public static int getSQUARE_SIZE() {
         return SQUARE_SIZE;
     }
 
-    class InterfaceRepaintThread extends Thread {
-
-        private BoardPanel p;
-
-        public InterfaceRepaintThread(BoardPanel _p) {
-            p = _p;
-        }
-
-        public void run() {
-
-            while(true) {
-                try{
-                        this.sleep(DELAY);
-                        p.repaint();
-                } catch (InterruptedException e) {
-                   e.printStackTrace();
-               }
-           }
-        }
+    public Board getBoard() {
+        return board;
     }
 
     private void initBoard() {
@@ -254,6 +358,27 @@ public class BoardPanel extends JPanel{
         Graphics2D g2d = (Graphics2D) g;
 
         board.render(g2d);
+    }
+
+    class InterfaceRepaintThread extends Thread {
+
+        private BoardPanel p;
+
+        public InterfaceRepaintThread(BoardPanel _p) {
+            p = _p;
+        }
+
+        public void run() {
+
+            while (true) {
+                try {
+                    this.sleep(DELAY);
+                    p.repaint();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
 }

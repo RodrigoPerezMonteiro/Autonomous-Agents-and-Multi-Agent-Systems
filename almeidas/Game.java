@@ -1,12 +1,13 @@
 package almeidas;
 
-import java.awt.EventQueue;
-import javax.swing.JFrame;
-
 import almeidas.domain.Board;
 import almeidas.graficos.BoardPanel;
 
-public class Game extends JFrame{
+import javax.swing.*;
+import java.awt.*;
+import java.net.URL;
+
+public class Game extends JFrame {
 
     private static Board board;
 
@@ -19,13 +20,12 @@ public class Game extends JFrame{
         setResizable(true);
         pack();
 
-        setTitle("ALMEIDAS - REACTIVE ARCHITECTURE");
+        setTitle("ALMEIDAS");
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-
     }
 
-    public static Board getBoard(){
+    public static Board getBoard() {
         return board;
     }
 
@@ -35,13 +35,18 @@ public class Game extends JFrame{
             @Override
             public void run() {
                 JFrame ex = new Game();
+
+                URL iconURL = getClass().getResource("garbage-man.png");
+                ImageIcon icon = new ImageIcon(iconURL);
+
+                ex.setIconImage(icon.getImage());
                 ex.setVisible(true);
                 ex.setResizable(false);
             }
         });
 
-        while(getBoard() == null);
-        while(!getBoard().isOver());
-        
+        while (getBoard() == null) ;
+        while (!getBoard().isOver()) ;
+
     }
 }
